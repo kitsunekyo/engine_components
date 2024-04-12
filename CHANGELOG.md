@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/ThatOpen/engine_components/compare/v1.5.0...v1.5.1) (2024-04-12)
+
+
+### Bug Fixes
+
+* correct FragmentIfcLoader example ([fc953a6](https://github.com/ThatOpen/engine_components/commit/fc953a6fce8e2160b690a58333a65144a9ac1914))
+
 ## [1.5.0](https://github.com/ThatOpen/engine_components/compare/v1.4.5...v1.5.0) (2024-04-11)
 
 
