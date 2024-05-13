@@ -47,6 +47,11 @@ export abstract class CivilNavigator extends Component<any> {
     select: Simple2DMarker;
   };
 
+  kpLabels: {
+    hover: Simple2DMarker;
+    select: Simple2DMarker;
+  };
+
   protected constructor(components: Components) {
     super(components);
     this.scene = new Simple2DScene(this.components, false);
@@ -54,6 +59,10 @@ export abstract class CivilNavigator extends Component<any> {
     this.mouseMarkers = {
       select: this.newMouseMarker("#ffffff"),
       hover: this.newMouseMarker("#575757"),
+    };
+    this.kpLabels = {
+      select: this.newKPLabel("#ffffff"),
+      hover: this.newKPLabel("#575757"),
     };
 
     this.setupEvents();
@@ -125,7 +134,7 @@ export abstract class CivilNavigator extends Component<any> {
           event,
           this.scene.camera,
           dom,
-          this._curveMeshes
+          this._curveMeshes,
         );
 
         if (result) {
@@ -136,6 +145,7 @@ export abstract class CivilNavigator extends Component<any> {
         }
 
         this.mouseMarkers.hover.visible = false;
+        this.kpLabels.hover.visible = false;
         this.highlighter.unHover();
         await this.onMarkerHidden.trigger({ type: "hover" });
       });
@@ -149,7 +159,7 @@ export abstract class CivilNavigator extends Component<any> {
           event,
           this.scene.camera,
           dom,
-          this._curveMeshes
+          this._curveMeshes,
         );
 
         if (intersects) {
@@ -168,9 +178,6 @@ export abstract class CivilNavigator extends Component<any> {
             this._previousAlignment = mesh.curve.alignment;
           }
         }
-
-        // this.highlighter.unSelect();
-        // this.clearKPStations();
       });
   }
 
@@ -199,6 +206,7 @@ export abstract class CivilNavigator extends Component<any> {
     const point = alignment.getPointAt(percentage, this.view);
     const { index } = found.curve.getSegmentAt(found.percentage);
     this.setMouseMarker(point, found.curve.mesh, index, type);
+    this.setKPLabel(found.curve.mesh, point, type);
   }
 
   setDefSegments(segmentsArray: any[]) {
@@ -240,7 +248,7 @@ export abstract class CivilNavigator extends Component<any> {
         // @ts-ignore
         [startX, startY],
         // @ts-ignore
-        [endX, endY]
+        [endX, endY],
       );
 
       const slopeSegment = (defSlope * 100).toFixed(2);
@@ -269,6 +277,7 @@ export abstract class CivilNavigator extends Component<any> {
 
   hideMarker(type: CivilMarkerType) {
     this.mouseMarkers[type].visible = false;
+    this.kpLabels[type].visible = false;
   }
 
   private adjustRaycasterOnZoom() {
@@ -290,7 +299,7 @@ export abstract class CivilNavigator extends Component<any> {
     const bar = document.createElement("div");
     root.appendChild(bar);
     bar.style.backgroundColor = color;
-    bar.style.width = "3rem";
+    bar.style.width = "1.5rem";
     bar.style.height = "3px";
     const mouseMarker = new Simple2DMarker(this.components, root, scene);
     mouseMarker.visible = false;
@@ -301,7 +310,7 @@ export abstract class CivilNavigator extends Component<any> {
     point: THREE.Vector3,
     object: THREE.Object3D,
     index: number | undefined,
-    type: CivilMarkerType
+    type: CivilMarkerType,
   ) {
     if (index === undefined) {
       return;
@@ -313,16 +322,56 @@ export abstract class CivilNavigator extends Component<any> {
     const { startPoint, endPoint } = curveMesh.curve.getSegment(index);
     const angle = Math.atan2(
       endPoint.y - startPoint.y,
-      endPoint.x - startPoint.x
+      endPoint.x - startPoint.x,
     );
     const bar = marker.element.children[0] as HTMLDivElement;
     const trueAngle = 90 - (angle / Math.PI) * 180;
     bar.style.transform = `rotate(${trueAngle}deg)`;
   }
 
+  private newKPLabel(color: string) {
+    const scene = this.scene;
+    const div = document.createElement("div");
+    div.style.color = color;
+    div.textContent = `${0o0}`;
+    const parentObject = scene.get();
+    const kpLabel = new Simple2DMarker(this.components, div, parentObject);
+    kpLabel.visible = false;
+    return kpLabel;
+  }
+  private setKPLabel(
+    mesh: FRAGS.CurveMesh,
+    point: THREE.Vector3,
+    type: CivilMarkerType,
+  ) {
+    if (!this.kpLabels[type]) {
+      console.error(`Label for type "${type}" is not created yet!`);
+      return;
+    }
+    const kpLabel = this.kpLabels[type];
+    const KpPoint = point.clone();
+    KpPoint.y += 8;
+    const markerElement = kpLabel.get().element as HTMLDivElement;
+
+    const { alignment } = mesh.curve;
+    const alignmentLength = alignment.getLength("horizontal");
+
+    let percentage = alignment.getPercentageAt(point, "horizontal");
+    if (percentage === null) {
+      percentage = alignment.getPercentageAt(point, "vertical") || 0;
+    }
+
+    const length = alignmentLength * percentage;
+    const kp = this.kpManager.getShortendKPValue(length);
+    markerElement.textContent = `KP: ${kp}`;
+
+    kpLabel.get().position.copy(KpPoint);
+    kpLabel.visible = true;
+  }
+
   private async updateMarker(
     intersects: THREE.Intersection,
-    type: CivilMarkerType
+    type: CivilMarkerType,
   ) {
     const { point, index, object } = intersects;
     const mesh = object as FRAGS.CurveMesh;
@@ -331,6 +380,7 @@ export abstract class CivilNavigator extends Component<any> {
     const percentage = alignment.getPercentageAt(point, this.view);
     const markerPoint = point.clone();
     this.setMouseMarker(markerPoint, mesh, index, type);
+    this.setKPLabel(mesh, markerPoint, type);
     if (percentage !== null) {
       await this.onMarkerChange.trigger({ alignment, percentage, type, curve });
     }

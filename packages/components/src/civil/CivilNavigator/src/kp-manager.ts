@@ -17,7 +17,7 @@ export class KPManager extends MarkerManager {
     renderer: SimpleRenderer | PostproductionRenderer,
     scene: THREE.Group | THREE.Scene,
     controls: CameraControls,
-    type: CivilHighlightType
+    type: CivilHighlightType,
   ) {
     super(components, renderer, scene, controls);
     this.view = type;
@@ -159,7 +159,7 @@ export class KPManager extends MarkerManager {
 
     const direction = new THREE.Vector3().subVectors(
       lastPoint,
-      secondLastPoint
+      secondLastPoint,
     );
 
     const normal = direction
@@ -176,7 +176,7 @@ export class KPManager extends MarkerManager {
     return normalLine;
   }
 
-  private generateConstantKP(mesh: FRAGS.CurveMesh) {
+  generateConstantKP(mesh: FRAGS.CurveMesh) {
     const { alignment } = mesh.curve;
     const data = new Map<
       number,
@@ -247,7 +247,7 @@ export class KPManager extends MarkerManager {
 
     const direction = new THREE.Vector3().subVectors(
       normalPoints.end,
-      normalPoints.start
+      normalPoints.start,
     );
     const normal = direction
       .clone()
@@ -259,12 +259,12 @@ export class KPManager extends MarkerManager {
     ]);
     const normalLine = new THREE.Line(
       normalGeom,
-      new THREE.LineBasicMaterial({ color: 0xff0000 })
+      new THREE.LineBasicMaterial({ color: 0xff0000 }),
     );
     return normalLine;
   }
 
-  private getShortendKPValue(value: number) {
+  public getShortendKPValue(value: number) {
     const formattedValue = value.toFixed(2);
     const [integerPart, fractionalPart] = formattedValue.toString().split(".");
     const formattedFractionalPart = fractionalPart || "00";
